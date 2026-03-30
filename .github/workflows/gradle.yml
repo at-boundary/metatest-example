@@ -70,12 +70,11 @@ jobs:
           path: oms-demo-api
           token: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
 
-      - name: Grant execute permission for gradlew in oms-demo-api
-        run: chmod +x oms-demo-api/gradlew
-
       - name: Run End-to-End Tests
         env:
           GPR_USER: ${{ github.actor }}
           GPR_TOKEN: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
         working-directory: oms-demo-api
-        run: ./gradlew clean test --tests "demoapi.*" --info -DrunWithMetatest=true
+        run: |
+          chmod +x gradlew
+          ./gradlew clean test --tests "demoapi.*" --info -DrunWithMetatest=true
