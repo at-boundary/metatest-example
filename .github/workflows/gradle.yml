@@ -40,12 +40,9 @@ jobs:
         env:
           GPR_USER: ${{ github.actor }}
           GPR_TOKEN: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
-
-
         run: ./gradlew build -x test
 
-
-  integration_tests:
+  end_to_end_tests:
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -53,31 +50,32 @@ jobs:
       packages: read
     steps:
       - uses: actions/checkout@v4
-  
+
       - name: Set up JDK 18
         uses: actions/setup-java@v4
         with:
           java-version: '18'
           distribution: 'temurin'
-  
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582
-  
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-  
-      - name: Pull latest WireMock image
-        run: docker pull wiremock/wiremock:latest
-  
-      - name: Start a WireMock server for mocked REST api
-        run: |
-          docker run -d --name wiremock-mocked-rest-api -p 8089:8089 \
-            -v $GITHUB_WORKSPACE/src/test/resources/mappings:/home/wiremock/mappings \
-            wiremock/wiremock:latest --port 8089 --verbose
-  
-      - name: Run Tests
+
+      - name: Checkout oms-demo-api
+        uses: actions/checkout@v4
+        with:
+          repository: at-boundary/oms-demo-api
+          path: oms-demo-api
+          token: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
+
+      - name: Grant execute permission for gradlew in oms-demo-api
+        run: chmod +x oms-demo-api/gradlew
+
+      - name: Run End-to-End Tests
         env:
           GPR_USER: ${{ github.actor }}
           GPR_TOKEN: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
-
-        run: ./gradlew clean test --info -DrunWithMetatest=true
+        working-directory: oms-demo-api
+        run: ./gradlew clean test --tests "demoapi.*" --info -DrunWithMetatest=true
