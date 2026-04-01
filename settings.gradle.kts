@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "metatest-rest-java-example"
+rootProject.name = "metatest-example"

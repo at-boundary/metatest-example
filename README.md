@@ -1,6 +1,6 @@
-# metatest-rest-java — Example Project
+# metatest-example — Example Project
 
-A working example of [Metatest](https://github.com/at-boundary/metatest-rest-java) running against a real stock trading API.
+A working example of [Metatest](https://github.com/at-boundary/metatest-example) running against a real stock trading API.
 
 The example covers authentication, accounts, orders, positions, stocks, and trades — with invariants intentionally ranging from well-covered to completely blind, so the Test Matrix shows a realistic spread of caught and escaped faults.
 
@@ -46,13 +46,17 @@ You only need to do this once — the database persists across restarts unless y
 ## Step 3 — Run the tests
 
 ```bash
-cd metatest-rest-java-example
+cd metatest-example
 
-# Normal run — no fault simulation
-./gradlew test
+./gradlew test                 # normal run — no simulation
+./gradlew test metatest        # test with fault simulation
+```
 
-# With Metatest fault simulation
-./gradlew test -DrunWithMetatest=true
+`metatest` is a modifier task. Append it to any test task to enable simulation on that run:
+
+```bash
+./gradlew integrationTest metatest    # works with any test task
+./gradlew test apiTest metatest       # enables simulation on both
 ```
 
 Reports are generated in the project root after the simulation run:
@@ -145,5 +149,5 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 
 ## Further reading
 
-- [Metatest library README](https://github.com/at-boundary/metatest-rest-java) — invariants DSL reference, full configuration options, how fault simulation works
+- [Metatest library README](https://github.com/at-boundary/metatest-example) — invariants DSL reference, full configuration options, how fault simulation works
 - [oms-demo-api README](https://github.com/at-boundary/oms-demo-api) — full API documentation, endpoint reference, Postman collection
