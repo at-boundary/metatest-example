@@ -25,3 +25,7 @@ Thumbs.db
 .env
 gradle.properties
 *antigen.properties
+
+# Antigen generation run artifacts
+ai_logs.txt
+/src/test/java/generated/

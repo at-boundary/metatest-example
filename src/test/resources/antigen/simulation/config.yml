@@ -1,0 +1,28 @@
+# Global fault-simulation config. Applies to every test class.
+#
+# Precedence (most specific wins for settings; additive union for exclusions):
+#   method <ClassName>.antigen.yml  >  class <ClassName>.antigen.yml  >  this file  >  built-in default
+#
+# This file is for SCOPING and GATING fault injection. It does NOT define invariants
+# (those live in simulation/invariants/*.yml) and it does NOT configure the generation
+# loop (spec/model/threshold live in generation/config.yml).
+
+# Endpoints to never mutate. Glob-style (* and ?), full-matched against the request path.
+# Applied per captured response, so a test that sets up an account then places an order
+# still has its /orders response mutated -- only the /accounts response is skipped.
+# Note the trailing * : the normalized path is /api/v1/accounts, so "*/account" would NOT
+# match (missing the 's' and anything after it). Unions with class-/method-level exclusions.
+exclusions:
+  endpoints:
+    - "*/accounts*"
+
+# Simulation defaults, overridable per class/method in <ClassName>.antigen.yml.
+settings:
+  default_quantifier: all        # all | any — how array-field invariants quantify
+  stop_on_first_catch: false     # stop mutating an endpoint once one fault is caught
+
+# Which responses are eligible for mutation at all.
+simulation:
+  only_success_responses: true   # skip non-2xx responses
+  skip_collections_response: true # skip top-level JSON arrays
+  min_response_fields: 1    # skip responses with fewer than N fields
