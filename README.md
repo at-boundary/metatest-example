@@ -1,115 +1,107 @@
-# antigen-example — Example Project
+# antigen-example
 
-A working example of [Antigen](https://github.com/antigen-labs/antigen) running fault simulation against a real stock trading API.
+A working example of [Antigen](https://github.com/integral-testing/antigen) — a test-generation
+harness reinforced by property-based fault simulation — running against a real stock-trading API.
 
-The example covers authentication, accounts, orders, positions, stocks, and trades — with invariants intentionally ranging from well-covered to completely blind, so the Test Matrix shows a realistic spread of caught and escaped faults.
+The example exercises both parts of the system. Fault simulation evaluates a suite by mutating HTTP
+responses to violate declared invariants (`price > 0`, `status == FILLED ⇒ filled_at != null`) and
+recording which tests detect the violation (**caught**) and which pass regardless (**escaped**, i.e.
+an assertion gap). The generation loop produces a suite from the OpenAPI specification and iterates
+against that same evaluation until it detects a target fraction of the injected faults. See the
+[Antigen README](https://github.com/integral-testing/antigen) for the method and its validity
+condition.
+
+The hand-written suite included here is deliberately uneven in assertion depth, so the report shows a
+representative spread of caught and escaped faults rather than a uniform result.
 
 ---
 
 ## Prerequisites
 
 - Docker and Docker Compose
-- Java 17+
-- Gradle 7.3+
+- Java 17+, Gradle 7.3+
+- `claude` CLI on PATH — only for the generation step
 
----
+## 1 — Start the demo API
 
-## Step 1 — Start the demo API
-
-The tests run against [oms-demo-api](https://github.com/antigen-labs/oms-demo-api), a Python/FastAPI trading simulator.
+Tests run against [oms-demo-api](https://github.com/integral-testing/oms-demo-api), a Python/FastAPI
+trading simulator. It serves `http://localhost:8000` (tests use base URI
+`http://localhost:8000/api/v1`).
 
 ```bash
 cd oms-demo-api
-docker-compose up --build
+docker-compose up --build      # wait for "Application startup complete"
 ```
 
-Wait until you see `Application startup complete`. The API is then available at `http://localhost:8000` (tests use the base URI `http://localhost:8000/api/v1`).
+Migrations run on startup, seeding stock prices and an admin user.
 
-Migrations run automatically on startup. They seed the stock prices (AAPL, GOOGL, MSFT, TSLA, AMZN) and create a default admin user.
+## 2 — Register the test user
 
----
-
-## Step 2 — Register the test user
-
-The example tests authenticate as `test` / `test123`. Register this user once:
+The tests authenticate as `test` / `test123`. Register once (persists unless you `docker-compose down -v`):
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "username": "test", "password": "test123", "full_name": "Test User"}'
+  -d '{"email":"test@example.com","username":"test","password":"test123","full_name":"Test User"}'
 ```
 
-You only need to do this once — the database persists across restarts unless you run `docker-compose down -v`.
-
----
-
-## Step 3 — Run the tests
+## 3 — Fault-simulate the suite
 
 ```bash
 cd antigen-example
-
-./gradlew test                          # normal run — no simulation
+./gradlew test                          # normal run, no simulation
 ./gradlew test -DrunWithAntigen=true    # run with fault simulation
 ```
 
-The `-DrunWithAntigen=true` flag enables simulation: the `tasks.test` block in `build.gradle.kts`
-attaches the AspectJ weaver agent for that run. You can scope it to specific classes:
+`-DrunWithAntigen=true` attaches the AspectJ weaver (wired by the `io.antigen` plugin) and evaluates
+the suite against the invariants. Reports land in the project root:
+
+- `antigen_report.html` — open it and start on the **Test Matrix** tab
+- `fault_simulation_report.json` — machine-readable, for CI
+- `schema_coverage.json` — per-endpoint response-field coverage
+
+## 4 — Generate a suite (optional)
 
 ```bash
-./gradlew test --tests "demoapi.OrdersApiTest" -DrunWithAntigen=true
+./gradlew generateTests
 ```
 
-Reports are generated in the project root after the simulation run:
-- `antigen_report.html` — open in a browser; start with the Test Matrix tab
-- `fault_simulation_report.json` — machine-readable, useful for CI
-- `schema_coverage.json` — per-endpoint response field coverage
+This reads `src/test/resources/antigen/generation/config.yml` (spec path, model, detection threshold)
+and drives Claude to write tests into `src/test/java/generated/`, iterating until they pass and catch
+enough injected faults. The generator sees only the OpenAPI spec — never the invariants or the
+injected faults — so it can't overfit to the answer key.
 
 ---
 
 ## What's in this project
 
-### Tests (`src/test/java/demoapi/`)
+**Tests** (`src/test/java/demoapi/`) — `AuthApiTest`, `AccountsApiTest`, `OrdersApiTest`,
+`PositionsApiTest`, `StocksApiTest`, `TradesApiTest`, over a shared `ApiTestBase`. They vary on
+purpose: some assert on every response field, others only check the status code and array size, and a
+few methods are `@Disabled` — so some faults are caught and others escape.
 
-Six test classes covering the full API surface:
+**Invariants** (`src/test/resources/antigen/simulation/invariants/`) — grouped by domain:
+`trading-auth.yml`, `trading-accounts.yml`, `trading-orders.yml`, `trading-market.yml`. Rules marked
+`# DEMO: will not be caught` are valid business rules the tests don't assert on; they surface as
+escaped faults — the point being that a test exists but isn't enforcing the rule.
 
-| Class | Endpoints covered |
-|---|---|
-| `AuthApiTest` | POST /auth/login, GET /auth/me |
-| `AccountsApiTest` | GET/POST /accounts, deposit, withdraw |
-| `OrdersApiTest` | POST/GET /orders |
-| `PositionsApiTest` | GET /positions, GET /positions/{id} |
-| `StocksApiTest` | GET/PUT /stocks, GET /stocks/{symbol} |
-| `TradesApiTest` | GET /trades, GET /trades/{id} |
-
-The tests deliberately vary in assertion depth — some validate every response field, others only check the status code and array size. This is intentional: it produces a realistic report where some faults are caught and others escape.
-
-### Invariant files (`src/test/resources/antigen/simulation/invariants/`)
-
-Four files defining business invariants grouped by domain:
-
-- `trading-auth.yml` — login token rules, current user integrity
-- `trading-accounts.yml` — account balances, deposit/withdraw postconditions, position integrity
-- `trading-orders.yml` — order lifecycle, status transitions, price constraints
-- `trading-market.yml` — stock price validity, trade data integrity
-
-Invariants marked `# DEMO: will not be caught` are valid business rules that the tests don't assert on. They show up as escaped faults in the report — the point being that the tests exist but aren't actually enforcing those rules.
-
-### Antigen config (`src/test/resources/antigen/`)
+**Config** (`src/test/resources/antigen/`):
 
 ```
 antigen/
-├── antigen.properties      # antigen.config.source=local
+├── antigen.properties              # io.antigen.core.config.source=local
 ├── simulation/
-│   ├── coverage_config.yml # endpoint coverage + gap analysis
-│   └── invariants/         # invariant files above
-└── generation/             # AI test-generation config + OpenAPI spec
+│   ├── config.yml                  # scoping & gating (excludes /accounts* from mutation)
+│   ├── coverage_config.yml         # coverage + spec gap analysis
+│   └── invariants/                 # the invariants above
+└── generation/
+    ├── config.yml                  # spec, model, fault_detection_threshold
+    └── api-specs.yaml              # the OpenAPI spec
 ```
 
 ---
 
-## What to expect in the output
-
-After `./gradlew test -DrunWithAntigen=true`, the console prints a summary:
+## What to expect
 
 ```
 ============================================================
@@ -119,39 +111,23 @@ After `./gradlew test -DrunWithAntigen=true`, the console prints a summary:
 --------------------------------------------------------------
   AccountsApiTest.testCreateAccount       11      12      1
   OrdersApiTest.testCreateBuyOrder         8      11      3
-  AuthApiTest.testLogin                    1       2      1
   OrdersApiTest.testListMyOrders           0       4      4
-  TradesApiTest.testListMyTrades           0       4      4
-  ...
 --------------------------------------------------------------
 ```
 
-Tests like `testCreateAccount` (which asserts on every response field) will catch most faults. Tests like `testListMyOrders` (which only checks `size() >= 0`) will catch none — all their invariants escape. This contrast is the core demonstration.
+Tests that assert on every field catch most faults; a test that only checks `size() >= 0` catches
+none, so all of its invariants escape. That contrast is what the example illustrates. Open
+`antigen_report.html` → **Test Matrix** for the full breakdown.
 
-Open `antigen_report.html` and go to the **Test Matrix** tab for the full picture.
-
----
-
-## Resetting the environment
-
-If tests fail due to stale data or auth issues:
+## Resetting
 
 ```bash
-# Wipe the database and start fresh
-cd oms-demo-api
-docker-compose down -v
-docker-compose up --build
-
-# Re-register the test user
-curl -X POST http://localhost:8000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "username": "test", "password": "test123", "full_name": "Test User"}'
+cd oms-demo-api && docker-compose down -v && docker-compose up --build
+# then re-register the test user (step 2)
 ```
-
----
 
 ## Further reading
 
-- [Antigen README](https://github.com/antigen-labs/antigen) — invariants DSL reference, full configuration options, how fault simulation and AI test generation work
-- [oms-demo-api README](https://github.com/antigen-labs/oms-demo-api) — full API documentation, endpoint reference, Postman collection
-</content>
+- [Antigen README](https://github.com/integral-testing/antigen) — invariants, configuration, the loop,
+  and the independence principle behind the metric.
+- [oms-demo-api](https://github.com/integral-testing/oms-demo-api) — API reference.
