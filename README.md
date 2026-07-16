@@ -1,6 +1,6 @@
 # antigen-example
 
-A working example of [Antigen](https://github.com/integral-testing/antigen) — a test-generation
+A working example of [Antigen](https://github.com/integralquality/antigen) — a test-generation
 harness reinforced by property-based fault simulation — running against a real stock-trading API.
 
 The example exercises both parts of the system. Fault simulation evaluates a suite by mutating HTTP
@@ -8,7 +8,7 @@ responses to violate declared invariants (`price > 0`, `status == FILLED ⇒ fil
 recording which tests detect the violation (**caught**) and which pass regardless (**escaped**, i.e.
 an assertion gap). The generation loop produces a suite from the OpenAPI specification and iterates
 against that same evaluation until it detects a target fraction of the injected faults. See the
-[Antigen README](https://github.com/integral-testing/antigen) for the method and its validity
+[Antigen README](https://github.com/integralquality/antigen) for the method and its validity
 condition.
 
 The hand-written suite included here is deliberately uneven in assertion depth, so the report shows a
@@ -24,7 +24,7 @@ representative spread of caught and escaped faults rather than a uniform result.
 
 ## 1 — Start the demo API
 
-Tests run against [oms-demo-api](https://github.com/integral-testing/oms-demo-api), a Python/FastAPI
+Tests run against [oms-demo-api](https://github.com/integralquality/oms-demo-api), a Python/FastAPI
 trading simulator. It serves `http://localhost:8000` (tests use base URI
 `http://localhost:8000/api/v1`).
 
@@ -128,6 +128,6 @@ cd oms-demo-api && docker-compose down -v && docker-compose up --build
 
 ## Further reading
 
-- [Antigen README](https://github.com/integral-testing/antigen) — invariants, configuration, the loop,
+- [Antigen README](https://github.com/integralquality/antigen) — invariants, configuration, the loop,
   and the independence principle behind the metric.
-- [oms-demo-api](https://github.com/integral-testing/oms-demo-api) — API reference.
+- [oms-demo-api](https://github.com/integralquality/oms-demo-api) — API reference.

@@ -4,11 +4,11 @@ buildscript {
     }
     dependencies {
         // The io.antigen Gradle plugin lives in the antigen-cli module (Phase 2b module split).
-        // Resolved from JitPack, which builds the tagged release of integral-testing/antigen.
+        // Resolved from JitPack, which builds the tagged release of integralquality/antigen.
         // Multi-module coordinate: com.github.<owner>.<repo>:<module>:<tag>.
         // For local development against unpublished changes, add mavenLocal() above and swap to
         // "io.antigen:antigen-cli:1.0.0-SNAPSHOT" (published via ./gradlew publishToMavenLocal).
-        classpath("com.github.integral-testing.antigen:antigen-cli:v0.9")
+        classpath("com.github.integralquality.antigen:antigen-cli:v0.9")
     }
 }
 
@@ -27,7 +27,7 @@ dependencies {
     testImplementation("io.rest-assured:json-path:5.3.0")
     testImplementation("org.assertj:assertj-core:3.24.2")
     // The JVM adapter; exposes the pure engine transitively via `api`.
-    testImplementation("com.github.integral-testing.antigen:antigen-test-runner:v0.9")
+    testImplementation("com.github.integralquality.antigen:antigen-test-runner:v0.9")
     compileOnly("org.projectlombok:lombok:1.18.36")
     annotationProcessor("org.projectlombok:lombok:1.18.36")
 }

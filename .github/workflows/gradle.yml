@@ -64,7 +64,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Clone oms-demo-api
-        run: git clone https://x-access-token:${{ secrets.GH_PACKAGES_READ_TOKEN }}@github.com/antigen-labs/oms-demo-api.git oms-demo-api
+        run: git clone https://x-access-token:${{ secrets.GH_PACKAGES_READ_TOKEN }}@github.com/integralquality/oms-demo-api.git oms-demo-api
 
       - name: Start oms-demo-api with Docker Compose
         working-directory: oms-demo-api
